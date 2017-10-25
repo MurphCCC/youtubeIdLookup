@@ -1,28 +1,59 @@
-var fs = require('fs');
-var YouTube = require('youtube-node');
-var http = require('http')
+#!/usr/bin/env node
+
+var fs = require('fs')
+var YouTube = require('youtube-node')
+var path = require('path')
+var config = require('./config.json')
+var request = require("request")
+
+var youTube = new YouTube(); //Module used to interact with youtube api
+
+youTube.setKey('AIzaSyBcErY9Vd0TTqje6q5iNVjwsWTUUTlYlKI');
+
+var LineByLineReader = require('line-by-line') //Module to perform line by line actions on our csv file
+
+var options = { method: 'GET',
+  url: 'http://192.168.8.21:81/cgi-bin/reports/reports.cgi',
+  qs: 
+   { TACTION: 'Preview',
+     TSTYLE: 'csv_/User analysis//template1508709446_O9RPd.swr',
+     startdate: '2017/10/24',
+     starthour: '0',
+     startminute: '00',
+     enddate: '2017/10/25',
+     endhour: '23',
+     endminute: '55',
+     '0option-user': '' },
+  headers: 
+   { cookie: config.loginCookie } };
 
 
-var youTube = new YouTube();
+		request(options, function (error, response, body) {
+		var linesExceptFirst = body.split('\n').slice(1).join('\n');
+		var linesExceptFirst = body.split('\n').slice(2).join('\n');
 
-youTube.setKey('AIzaSyB1OOSpTREs85WUMvIgJvLTZKye4BVsoFU');
+  		if (error) throw new Error(error);
+  		fs.appendFile('test.csv', linesExceptFirst, function (err, result) {
+  			if(err) {
+  				console.error(err)
+  			}
+  			console.log('file written, now lets parse it')
+  			lr = new LineByLineReader('test.csv');
+  			
+  			lr.on('error', function (err) {
+				// 'err' contains error object
+				if (err) {
+					console.error(err)
+				}
+			});
 
-var LineByLineReader = require('line-by-line'),
-    lr = new LineByLineReader('report3.csv');
 
-
-
-
-	lr.on('error', function (err) {
-	// 'err' contains error object
-	});
-
-
-
-	lr.on('line', function (line) {
+		 lr.on('line', function (line) {
 		// 'line' contains the current line without the trailing newline character.
 		arr = line.split(',')
-		console.log(arr[3]);
+		console.log(arr);
+
+
 		if (!arr[2]) {	//This line does not contain an IP Address or video id, so exclude it from our results
 			// console.log('Does not exist');
 		} else {
@@ -40,6 +71,9 @@ var LineByLineReader = require('line-by-line'),
 			  		// console.log(Object.keys(video[0]))
 
 			  		if (video[0]) {
+			  					if(arr.indexOf('Web search phrases') >= 0) {
+									console.log('skip this line')
+								}
 			  			console.log(arr[2] + ' ' + video[0].snippet.title)
 						fs.appendFile('results.json', '\n' + arr[2] + ' ' + video[0].snippet.title, (err) => {  
 						    if (err) throw err;
@@ -60,4 +94,31 @@ lr.on('end', function () {
 
 	// All lines are read, file is closed now.
 });
+
+
+
+
+  		});
+	});
+	
+	
+		
+
+		
+	
+
+
+
+
+	
+
+		
+
+
+
+
+
+
+
+	
 
